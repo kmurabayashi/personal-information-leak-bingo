@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>流出ビンゴ（汎用版）</title>
+    <style>
+      :root {
+        --bg: #f4f4f2;
+        --surface: #ffffff;
+        --surface-2: #ececea;
+        --ink: #1c1e22;
+        --ink-soft: #565b63;
+        --line: #d8d8d2;
+        --stamp: #b3271e;
+        --stamp-soft: #fbeae8;
+        --accent: #14532d;
+        --accent-soft: #e6f2e9;
+        --gold: #8a6d1a;
+        --shadow: 0 10px 30px rgba(20, 22, 26, 0.10);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #141518;
+          --surface: #1e2024;
+          --surface-2: #26282d;
+          --ink: #f0efe9;
+          --ink-soft: #a8adb5;
+          --line: #3a3d43;
+          --stamp: #e0574d;
+          --stamp-soft: #3a2320;
+          --accent: #7bc98f;
+          --accent-soft: #22352a;
+          --gold: #d9b45b;
+          --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", "Noto Sans JP", sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 1060px; margin: 0 auto; padding: 28px 18px 56px; }
+
+      header.top { margin-bottom: 20px; }
+      .kicker {
+        display: inline-block;
+        font-size: 12px; font-weight: 700; letter-spacing: .14em;
+        color: var(--stamp); border: 1.5px solid var(--stamp);
+        padding: 2px 10px; border-radius: 999px; margin-bottom: 12px;
+      }
+      h1 {
+        font-size: clamp(30px, 6vw, 46px);
+        line-height: 1.15; margin: 0 0 10px; font-weight: 900; letter-spacing: .01em;
+      }
+      h1 .red { color: var(--stamp); }
+      .lead { margin: 0; color: var(--ink-soft); font-size: 15px; max-width: 42em; }
+      .lead strong { color: var(--ink); }
+
+      /* stats */
+      .stats {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+        margin: 22px 0 18px;
+      }
+      .stat {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+        padding: 12px 14px; text-align: center;
+      }
+      .stat .num { font-size: clamp(26px, 5vw, 36px); font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
+      .stat .num.red { color: var(--stamp); }
+      .stat .lbl { font-size: 12px; color: var(--ink-soft); font-weight: 700; letter-spacing: .06em; }
+      .bingo-flash {
+        display: none; text-align: center; font-weight: 900; font-size: 20px;
+        color: var(--stamp); margin: 0 0 14px; letter-spacing: .2em;
+      }
+      .bingo-flash.on { display: block; }
+
+      .layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+      @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } }
+
+      /* bingo card */
+      .card {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+        box-shadow: var(--shadow); padding: 16px;
+      }
+      .card-head {
+        display: grid; grid-template-columns: repeat(5, 1fr); text-align: center;
+        font-weight: 900; font-size: clamp(20px, 5vw, 30px); letter-spacing: .3em;
+        color: var(--stamp); padding: 2px 0 12px; text-indent: .3em;
+      }
+      .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+      .cell {
+        position: relative; appearance: none; border: 1.5px solid var(--line);
+        background: var(--surface); color: var(--ink); border-radius: 10px;
+        min-height: 92px; padding: 8px 6px 6px; cursor: pointer; text-align: center;
+        font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+        transition: border-color .15s ease, background .15s ease;
+      }
+      .cell:hover { border-color: var(--ink-soft); }
+      .cell:focus-visible { outline: 3px solid var(--stamp); outline-offset: 2px; }
+      .cell.selected { border-color: var(--stamp); border-width: 2.5px; }
+      .cell .cname { font-size: clamp(11px, 2.6vw, 13.5px); font-weight: 800; line-height: 1.35; word-break: break-all; }
+      .cell .cdate { font-size: 10.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+      .cell.opened { background: var(--stamp-soft); }
+      .cell .stamp {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%) rotate(-14deg);
+        border: 2.5px solid var(--stamp); color: var(--stamp); border-radius: 6px;
+        font-weight: 900; font-size: clamp(12px, 3vw, 16px); letter-spacing: .12em;
+        padding: 1px 8px; background: color-mix(in srgb, var(--stamp-soft) 72%, transparent);
+        pointer-events: none; white-space: nowrap;
+      }
+      .cell.free { background: var(--accent-soft); border-style: dashed; }
+      .cell.free .cname { color: var(--accent); font-size: clamp(13px, 3.4vw, 17px); letter-spacing: .2em; }
+      .cell.in-bingo::after {
+        content: ""; position: absolute; inset: 0; border-radius: 10px;
+        box-shadow: inset 0 0 0 3px var(--gold); pointer-events: none;
+      }
+      .hint { font-size: 12.5px; color: var(--ink-soft); margin: 12px 2px 0; }
+
+      .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+      button.btn {
+        appearance: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 14.5px;
+        border-radius: 10px; padding: 12px 18px; border: 1.5px solid var(--ink);
+        background: var(--ink); color: var(--bg);
+      }
+      button.btn.secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+      button.btn:active { transform: translateY(1px); }
+      button.btn:focus-visible { outline: 3px solid var(--stamp); outline-offset: 2px; }
+
+      /* detail panel */
+      .detail {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+        padding: 20px; position: sticky; top: 16px;
+      }
+      @media (max-width: 820px) { .detail { position: static; } }
+      .detail .d-kicker { font-size: 11.5px; font-weight: 800; letter-spacing: .12em; color: var(--ink-soft); margin-bottom: 6px; }
+      .detail h2 { font-size: 21px; margin: 0 0 4px; line-height: 1.35; }
+      .detail .d-date { color: var(--stamp); font-weight: 800; font-size: 13.5px; margin-bottom: 14px; }
+      .detail dl { margin: 0 0 14px; display: grid; gap: 12px; }
+      .detail dt { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 2px; }
+      .detail dd { margin: 0; font-size: 14.5px; }
+      .detail .toggle-btn {
+        width: 100%; appearance: none; cursor: pointer; font-family: inherit;
+        font-weight: 900; font-size: 15.5px; border-radius: 10px; padding: 13px;
+        border: 2px solid var(--stamp); background: var(--stamp); color: #fff;
+      }
+      @media (prefers-color-scheme: dark) { .detail .toggle-btn { color: #1c1210; } }
+      .detail .toggle-btn.is-open { background: var(--surface); color: var(--stamp); }
+      .detail .toggle-btn:focus-visible { outline: 3px solid var(--stamp); outline-offset: 2px; }
+      .detail .empty { color: var(--ink-soft); font-size: 14.5px; margin: 0; }
+
+      /* pool list */
+      section.pool { margin-top: 34px; }
+      section.pool h2 { font-size: 20px; margin: 0 0 4px; }
+      section.pool p.sub { color: var(--ink-soft); font-size: 13.5px; margin: 0 0 14px; }
+      .pool-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+      .pool-item {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+        text-align: left; cursor: pointer; font-family: inherit; color: var(--ink); width: 100%;
+      }
+      .pool-item:hover { border-color: var(--ink-soft); }
+      .pool-item:focus-visible { outline: 3px solid var(--stamp); outline-offset: 2px; }
+      .pool-item .p-name { font-weight: 800; font-size: 14.5px; display: block; }
+      .pool-item .p-meta { font-size: 12.5px; color: var(--ink-soft); display: block; margin-top: 2px; }
+      .pool-item .p-badge {
+        display: inline-block; font-size: 11px; font-weight: 800; color: var(--stamp);
+        border: 1px solid var(--stamp); border-radius: 999px; padding: 0 8px; margin-top: 6px;
+      }
+      .pool-item .p-badge.off { color: var(--ink-soft); border-color: var(--line); }
+
+      footer.notes {
+        margin-top: 34px; border-top: 1px solid var(--line); padding-top: 18px;
+        color: var(--ink-soft); font-size: 13px; display: grid; gap: 8px;
+      }
+      footer.notes p { margin: 0; }
+      footer.notes strong { color: var(--ink); }
+
+      .toast {
+        position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px);
+        background: var(--ink); color: var(--bg); font-weight: 800; font-size: 14px;
+        padding: 10px 18px; border-radius: 999px; opacity: 0; pointer-events: none;
+        transition: opacity .2s ease, transform .2s ease; z-index: 50; max-width: 92vw; text-align: center;
+      }
+      .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+      .share-fallback { margin-top: 10px; display: none; }
+      .share-fallback textarea {
+        width: 100%; font-family: inherit; font-size: 14px; padding: 10px; border-radius: 8px;
+        border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <span class="kicker">2026年に公表された流出事件だけ</span>
+        <h1>流出<span class="red">ビンゴ</span> <span style="font-size:.55em; vertical-align:.35em; letter-spacing:.06em;">2026</span></h1>
+        <p class="lead">
+          2026年に公表された情報流出事件35件からランダムに引いた5×5カード。Tier表の上位級も含む、今年だけでこの密度。
+          <strong>「通知が来た」「自分も対象だった」マス</strong>を開けて、ビンゴを目指す——目指してどうするのかは、置いておく。
+        </p>
+      </header>
+
+      <div class="stats" aria-live="polite">
+        <div class="stat"><div class="num red" id="stat-hit">0</div><div class="lbl">被弾数（開けたマス）</div></div>
+        <div class="stat"><div class="num" id="stat-reach">0</div><div class="lbl">リーチ</div></div>
+        <div class="stat"><div class="num" id="stat-bingo">0</div><div class="lbl">ビンゴ</div></div>
+      </div>
+      <p class="bingo-flash" id="bingo-flash">― BINGO ―</p>
+
+      <div class="layout">
+        <div>
+          <div class="card">
+            <div class="card-head" aria-hidden="true"><span>B</span><span>I</span><span>N</span><span>G</span><span>O</span></div>
+            <div class="grid" id="grid" role="group" aria-label="ビンゴカード"></div>
+            <p class="hint">マスをタップすると右（下）のパネルに事件の詳細が出ます。開ける／閉じるはパネルのボタンでどうぞ。</p>
+          </div>
+          <div class="controls">
+            <button class="btn" id="btn-new" type="button">新しいカードを引く</button>
+            <button class="btn secondary" id="btn-share" type="button">結果をコピーしてシェア</button>
+          </div>
+          <div class="share-fallback" id="share-fallback">
+            <textarea id="share-text" rows="2" readonly aria-label="シェア用テキスト"></textarea>
+          </div>
+        </div>
+
+        <aside class="detail" id="detail" aria-live="polite">
+          <p class="empty">マスを選ぶと、ここに事件の詳細（公表年月・規模・漏れた項目・概要）が出ます。</p>
+        </aside>
+      </div>
+
+      <section class="pool">
+        <h2>事件プール（全35件・2026年分のみ）</h2>
+        <p class="sub">2026年に公表された事件のみ。各社の公式発表・大手報道ベースで、Tier表の上位事件も公式発表で裏取りしたものだけ採用。タップすると詳細が見られます（盤面に無い事件も含みます）。</p>
+        <div class="pool-list" id="pool-list"></div>
+      </section>
+
+      <footer class="notes">
+        <p><strong>これは自己申告ベースのジョークサービスです。</strong>対象だったかどうかは本人の記憶と通知メール頼みで、照合・検証は一切していません。「たぶん対象だった」で開けて構いません。</p>
+        <p><strong>メールアドレス等の入力欄はありません。</strong>入力を求めず、全てブラウザの中で完結します。開けたマスの記録も外部に送信されません（ページを閉じれば消えます）。流出チェックを装ってメールアドレスを集めるようなことはしません。</p>
+        <p>事件の件数・規模の表現（「約」「最大」「可能性」「おそれ」を含む）は、各社の公式発表ベースの表記そのままです。調査の進展で後日更新・訂正された発表もあります。</p>
+        <p>ビンゴが揃っても<strong>景品はありません</strong>。あるのは「また通知が来た」という事実だけです。不審な連絡が来たら、メールやSMSのリンクではなく公式アプリ・公式サイトから確認を。</p>
+      </footer>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <script>
+      // 検証済みデータセット（全35件・2026年に公表された事件のみ）。表記は公式発表ベースそのまま。
+      var POOL = [
+        { id: 1,  short: "タイムズカー", name: "タイムズカー（タイムズモビリティ）", date: "2026年9月", scale: "会員情報6,628,007件の外部送信の痕跡を確認、本人確認書類画像1,464,800件（暗号化状態）", items: "氏名・住所・生年月日・電話・メール・免許情報・本人確認書類画像（カード番号全桁・セキュリティコードは非保持で対象外）", summary: "Webシステムの脆弱性を突かれ会員情報と免許証等の画像が外部送信" },
+        { id: 2,  short: "ユミルリンク／Cuenote", name: "ユミルリンク／Cuenote FC（メール配信）", date: "2026年10月", scale: "49システムで延べ51,628,280件（件数調査中の分もあり。延べ件数で人数ではない）", items: "メールアドレス、氏名・都道府県・生年月日等（利用企業ごとに異なる。カード情報の記載なし）", summary: "認証情報窃取と不正プログラムで複数企業のメール配信基盤からデータ出力。スマートEXや多数の利用企業に波及" },
+        { id: 3,  short: "Eストアー／ショップサーブ", name: "Eストアー／ショップサーブ", date: "2026年8月", scale: "漏えい対象者 約23,356,000人、うちカード情報の一部 約2,096,900人", items: "氏名・住所・電話・メール・会員ID・暗号化パスワード。カード情報は約209万人分のみ（名義・番号の一部・有効期限。全桁やセキュリティコードは非保持）", summary: "アプリ脆弱性を悪用されDB情報が外部送信されたECプラットフォーム全体の漏えい" },
+        { id: 4,  short: "Gyazo", name: "Helpfeel／Gyazo", date: "2026年9月", scale: "ユーザー情報 約2,362万件（アカウント数で人数ではない）", items: "名前（ニックネーム等）・メールアドレス・パスワードのハッシュ値・利用者ID等（決済情報は含まれない）", summary: "画像アップロードサーバーの脆弱性でDBが外部送信" },
+        { id: 5,  short: "EPARK", name: "EPARKリラク＆エステ／PeakManager", date: "2026年7月", scale: "約2,218万レコード（名寄せ後の概数で人数への換算は困難）", items: "氏名・生年月日・性別・住所・電話・メール、店舗備考欄（健康状態等の要配慮情報を一部含む。カード情報の可能性がある記載5件）", summary: "店舗向け予約・顧客管理DBが外部転送された後に削除されていた事案" },
+        { id: 6,  short: "焼肉きんぐ", name: "物語コーポレーション／焼肉きんぐ公式アプリ", date: "2026年10月", scale: "10,788,963件（登録数のほぼ全件）", items: "会員番号・氏名（アプリ登録名）・メール・電話（パスワード・生年月日・利用履歴は対象外、決済情報は保有していない）", summary: "会員管理システムへの不正アクセス" },
+        { id: 7,  short: "skyticket", name: "アドベンチャー／skyticket", date: "2026年10月", scale: "顧客情報 約1,464万件が流出／流出のおそれ、別途カード情報 最大6,140名", items: "氏名（パスポート表記含む）・生年月日・メール・電話・住所・ハッシュ化パスワード（一部）。カード情報は最大6,140名分（番号・名義・有効期限、セキュリティコードなし）", summary: "経路の異なる3件の不正アクセス" },
+        { id: 8,  short: "ソースネクスト", name: "ソースネクスト（ソースネクストID会員）", date: "2026年10月", scale: "流出した可能性のある対象 22,519,960件（公式は一貫して「おそれ／可能性」の表現）", items: "メールアドレス・パスワード・氏名・住所・性別・電話・生年月日等（カード情報は保存しておらず対象外）", summary: "会員情報取得APIの不正利用" },
+        { id: 9,  short: "バーガーキング", name: "バーガーキング公式アプリ（ビーケー・ジャパン）", date: "2026年10月", scale: "公式アプリ会員情報 約1,118万件の漏えいを確認", items: "会員ID・メール・氏名・電話・生年月日・性別・都道府県等（カード番号は保持しておらず漏えいなし、パスワードの漏えいも確認されていない）", summary: "会員管理システムへの不正アクセス" },
+        { id: 10, short: "CAPCOM ID", name: "カプコン／CAPCOM ID", date: "2026年10月", scale: "メールアドレス＋識別情報 11,774,247件（全世界合計）の漏えい", items: "メールアドレス、アカウント作成日時・最終ログイン・IPアドレス等（カード情報の漏えいはなし）", summary: "共通アカウント基盤への不正アクセス" },
+        { id: 11, short: "アフラック生命", name: "アフラック生命保険", date: "2026年6月", scale: "お客様 約440万人、うち保険料振替口座情報を含む 約22万人", items: "氏名・生年月日・性別・住所・電話・証券番号・保障内容、（約22万人は）振替口座情報（マイナンバー・カード情報・メールは含まれていない）", summary: "不正アクセスで契約関連情報が流出" },
+        { id: 12, short: "ムラウチドットコム", name: "ムラウチドットコム", date: "2026年9月", scale: "個人情報 7,716,811件の漏えいを確認", items: "氏名・住所・電話・メール・生年月日・性別（カード情報・パスワードは含まれていない）", summary: "Webシステムの脆弱性を起点に複数システムへ不正アクセス" },
+        { id: 13, short: "ロート製薬", name: "ロート製薬（通信販売の顧客対応情報）", date: "2026年11月", scale: "顧客管理システムの対象 2,797,545人", items: "氏名・住所・電話番号。カード情報は通話音声に含まれた分が9,715人分（番号・有効期限。セキュリティコード・パスワードは対象外）", summary: "電話システムのアカウント不正利用を踏み台に顧客管理システムへ到達" },
+        { id: 14, short: "楽天トラベル", name: "楽天トラベル（海外ホテル予約の一部ページ）", date: "2026年10月", scale: "ログイン利用者 最大約260万件が不正アクセスの対象／流出のおそれ（漏えい確認ではない）。予約者は最大約4万件", items: "氏名・メール・電話、予約者は予約情報・同伴者氏名等。カードは一部のみ（下4桁・名義・有効期限等、全桁・セキュリティコードなし）", summary: "海外ホテル予約ページへの不正アクセス" },
+        { id: 15, short: "So-net", name: "So-net（ソニーネットワークコミュニケーションズ）", date: "2026年10月", scale: "So-net会員情報2,141,986件＋plala（Sコース）443,495件の漏えい", items: "氏名・電話・メール・ユーザーID・生年月日・性別等（会員情報自体のパスワード・カード情報の漏えいはなし）", summary: "会員データベースへの不正アクセス" },
+        { id: 16, short: "Joshin", name: "Joshin（ジョーシン）", date: "2026年10月", scale: "会員情報DB 最大約600万件が漏えいの可能性（おそれ。確定ではない）", items: "氏名・住所・電話・会員番号（カード情報は保持しておらず対象外）", summary: "会員情報データベースサーバーへの不正アクセス" },
+        { id: 17, short: "阪急阪神百貨店", name: "阪急阪神百貨店／H2O ID", date: "2026年10月", scale: "約126万件の一部が漏えい（ほぼ全会員）", items: "H2O ID・氏名・性別・メール・住所・電話・生年月日等", summary: "予約サイト経由で顧客管理システムが不正アクセスを受けた" },
+        { id: 18, short: "ヤマト運輸", name: "ヤマト運輸（クロネコ代金後払い）", date: "2026年10月", scale: "利用者情報 約526万件の持ち出し確認（届け先等と合計 約531万件）", items: "氏名・住所・電話・メール・商品明細等（カード情報・パスワードは含まれない）", summary: "不正アクセスで持ち出されたと確定" },
+        { id: 19, short: "銀のさら・釜寅", name: "ライドオンエクスプレス（銀のさら・釜寅・すし上等）", date: "2026年10月", scale: "最大約650万件の漏えいのおそれ（確認ではなく可能性）", items: "氏名・住所・電話・メール・性別・生年月日・パスワードのハッシュ値・注文履歴等（カード情報は保有せず対象外）", summary: "登録情報保管サーバーの運営会社のランサムウェア被害" },
+        { id: 20, short: "コミックシーモア", name: "コミックシーモア（NTTソルマーレ）", date: "2026年10月", scale: "会員DB登録情報319件の流出確認＋システムログ上の情報 最大約420万件の流出確認（別区分・合算不可。ログ分は重複を含む可能性があり人数ではない）", items: "メールアドレス・ニックネーム・生年月日・性別、DB側はハッシュ化パスワードも（カード情報は保有せず流出なし）", summary: "不正アクセスでDBとログの2区分で流出" },
+        { id: 21, short: "日本経済新聞社", name: "日本経済新聞社（開発用クラウド）", date: "2026年10月", scale: "約183万件の漏えい。ただし氏名・メール・住所・電話・生年月日のいずれかを含むのは約15万件のみで、残り約168万件は識別子のみ", items: "氏名・メール・住所・電話・生年月日（約15万件分。カード情報は含まれない）", summary: "開発用クラウドの認証情報が窃取され不正アクセス" },
+        { id: 22, short: "さくらインターネット", name: "さくらインターネット（販売管理システム）", date: "2026年8月", scale: "1,360,563アカウントが閲覧または取得された可能性（持ち出しを裏付ける明確な事実は確認されておらず流出確定ではない）", items: "会員ID・会社名・住所・氏名・電話・メール・契約情報等（カード情報は保持せず対象外）", summary: "販売管理システムへの不正アクセスが判明" },
+        { id: 23, short: "2りんかん", name: "2りんかんイエローハット", date: "2026年4月", scale: "3,179,454名分の取得が特定", items: "氏名・住所・電話・生年月日・性別・メール・会員番号・アプリパスワード・ポイント残高・車両情報（カード情報は保持せず漏えいなし）", summary: "アプリのAPIを悪用した不正アクセス" },
+        { id: 24, short: "手間いらず", name: "手間いらず（宿泊予約管理）", date: "2026年9月", scale: "最大約445万人分が閲覧・取得された可能性", items: "予約者の氏名・電話・メール、宿泊施設名、チェックイン/アウト日、宿泊料金（カード情報・ログイン情報は保有していない）", summary: "予約管理システムへの不正アクセス、情報を悪用したフィッシングも発生" },
+        { id: 25, short: "ローソン", name: "ローソン（ローソンID）", date: "2026年10月", scale: "ローソンID 215万5,345件の漏えいを確認", items: "メール・氏名・性別・電話・住所等（別途アプリ予約26件にはカード番号の一部も）", summary: "アプリ関連システムが不正に利用される不正アクセス" },
+        { id: 26, short: "第一興商", name: "第一興商（ビッグエコー等）", date: "2026年10月", scale: "約872万4,000件の漏えいのおそれ", items: "氏名・性別・生年月日・メール・電話（パスワードは含まない）", summary: "委託先の従業員端末1台がマルウェア感染" },
+        { id: 27, short: "ブックオフ", name: "ブックオフ", date: "2026年10月", scale: "最大約643万件の会員情報が流出", items: "氏名・生年月日・性別・メール・電話・住所・パスワードのハッシュ値・会員番号等（決済情報は含まない）", summary: "子会社の会員管理システムへの不正アクセス" },
+        { id: 28, short: "リクルート（カーセンサー）", name: "リクルート（カーセンサーnet）", date: "2026年10月", scale: "最大3,709,551件の漏えいの可能性", items: "問い合わせ利用者の氏名・住所等、販売店情報、従業員情報（カード情報・パスワードは含まない）", summary: "カーセンサーnetと販売店向けシステムへの不正アクセス" },
+        { id: 29, short: "ふるさとチョイス", name: "ふるさとチョイス（トラストバンク）", date: "2026年10月", scale: "会員情報4,454,097件の外部流出を確認", items: "氏名・メール・住所・電話、ハッシュ化されたパスワード、寄附控除試算額", summary: "ふるさと納税サイトへの不正アクセス" },
+        { id: 30, short: "JAL（日本航空）", name: "JAL（日本航空）", date: "2026年10月", scale: "約9万2,000名の予約情報が参照された形跡（うち約2,000名は詳細情報も）", items: "予約番号・氏名・搭乗日/区間/クラス、詳細分はメール・電話・パスポート番号・国籍・マイレージ番号（カード番号・パスワードは対象外）", summary: "旅客システム委託先Amadeusへの不正アクセス" },
+        { id: 31, short: "ノジマ", name: "ノジマ（ノジマオンライン）", date: "2026年11月", scale: "約700万件の会員情報の漏えいを確認", items: "氏名・生年月日・性別・住所・電話・ログインID・暗号化されたパスワード・メール（カード情報は保持していない）", summary: "ECサイト2件の会員管理システムへの不正アクセス" },
+        { id: 32, short: "MS&ADグループ3社", name: "MS&ADグループ3社（三井住友海上・あいおいニッセイ同和損保・三井ダイレクト損保）", date: "2026年11月", scale: "3社合計71万件余りの流出", items: "証券番号・氏名・住所・電話等（あいおい分にはカード番号の下4桁も）", summary: "契約者専用サイト・見積もりサイトへの不正アクセス" },
+        { id: 33, short: "アソビュー！", name: "アソビュー！", date: "2026年11月", scale: "会員情報1,582万1,184件が流出", items: "メール・会員ID・氏名・性別・生年月日・電話・郵便番号・チケット購入/利用情報（パスワード・カード情報は対象外）", summary: "メール配信委託先アララへの不正アクセス" },
+        { id: 34, short: "カカクコム", name: "カカクコム（食べログ・価格.com等）", date: "2026年11月", scale: "5サービス合計 約570万件", items: "メールアドレス中心（価格.comの約65万件は誕生日・性別も、メール本文は対象外）", summary: "メール配信委託先アララへの不正アクセス（アソビュー！とは別サービスの公表）" },
+        { id: 35, short: "アイリスプラザ", name: "アイリスプラザ（アイリスオーヤマ公式通販）", date: "2026年11月", scale: "約770万人分の漏えいの可能性", items: "氏名・住所・電話・メール・性別・生年月日・暗号化されたパスワード（会員分）（カード情報は保存なし）", summary: "利用する外部クラウドサービスへの不正アクセス" }
+      ];
+      var FREE = { id: 0, short: "FREE", name: "FREE（フリー枠）", date: "いつも", scale: "—", items: "—", summary: "中央のフリー枠。最初から開いています。ここは被弾ではなく、運命の真ん中。" };
+
+      var LINES = [
+        [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],
+        [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],
+        [0,6,12,18,24],[4,8,12,16,20]
+      ];
+
+      var board = [];        // 25 items (FREE at index 12)
+      var opened = {};       // id -> true
+      var selectedId = null; // detail panel target
+      var bingoCells = {};   // index -> true when part of a completed line
+
+      function shuffle(arr) {
+        var a = arr.slice();
+        for (var i = a.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = a[i]; a[i] = a[j]; a[j] = t;
+        }
+        return a;
+      }
+
+      function newCard() {
+        var picked = shuffle(POOL).slice(0, 24);
+        board = picked.slice(0, 12).concat([FREE], picked.slice(12));
+        opened = {};
+        selectedId = null;
+        renderAll();
+        document.getElementById("detail").innerHTML =
+          '<p class="empty">新しいカードを引きました。マスを選ぶと、ここに事件の詳細が出ます。</p>';
+      }
+
+      function isOpenAt(idx) {
+        if (idx === 12) return true;
+        return !!opened[board[idx].id];
+      }
+
+      function computeStats() {
+        var hit = 0;
+        board.forEach(function (item) { if (item.id !== 0 && opened[item.id]) hit++; });
+        var bingo = 0, reach = 0;
+        bingoCells = {};
+        LINES.forEach(function (line) {
+          var openCount = 0;
+          line.forEach(function (idx) { if (isOpenAt(idx)) openCount++; });
+          if (openCount === 5) {
+            bingo++;
+            line.forEach(function (idx) { bingoCells[idx] = true; });
+          } else if (openCount === 4) {
+            reach++;
+          }
+        });
+        return { hit: hit, reach: reach, bingo: bingo };
+      }
+
+      function renderGrid() {
+        var grid = document.getElementById("grid");
+        grid.innerHTML = "";
+        board.forEach(function (item, idx) {
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "cell";
+          if (item.id === 0) {
+            btn.classList.add("free");
+            btn.innerHTML = '<span class="cname">FREE</span><span class="cdate">フリー枠</span>';
+            btn.setAttribute("aria-label", "フリー枠（最初から開いています）");
+            btn.addEventListener("click", function () { selectCell(0, idx); });
+          } else {
+            if (opened[item.id]) {
+              btn.classList.add("opened");
+              var stamp = document.createElement("span");
+              stamp.className = "stamp";
+              stamp.textContent = "流出済";
+              btn.appendChild(stamp);
+            }
+            var nm = document.createElement("span");
+            nm.className = "cname"; nm.textContent = item.short;
+            var dt = document.createElement("span");
+            dt.className = "cdate"; dt.textContent = item.date.split("（")[0];
+            btn.appendChild(nm); btn.appendChild(dt);
+            btn.setAttribute("aria-pressed", opened[item.id] ? "true" : "false");
+            btn.setAttribute("aria-label", item.name + "（" + item.date + "）" + (opened[item.id] ? "・開いています" : ""));
+            btn.addEventListener("click", function () { selectCell(item.id, idx); });
+          }
+          if (selectedId === item.id) btn.classList.add("selected");
+          if (bingoCells[idx]) btn.classList.add("in-bingo");
+          grid.appendChild(btn);
+        });
+      }
+
+      function renderStats() {
+        var s = computeStats();
+        document.getElementById("stat-hit").textContent = s.hit;
+        document.getElementById("stat-reach").textContent = s.reach;
+        document.getElementById("stat-bingo").textContent = s.bingo;
+        document.getElementById("bingo-flash").className = "bingo-flash" + (s.bingo > 0 ? " on" : "");
+        return s;
+      }
+
+      function findItem(id) {
+        for (var i = 0; i < POOL.length; i++) if (POOL[i].id === id) return POOL[i];
+        return null;
+      }
+
+      function selectCell(id, idx) {
+        selectedId = id;
+        var item = id === 0 ? FREE : findItem(id);
+        var onBoard = board.some(function (b) { return b.id === id; });
+        var detail = document.getElementById("detail");
+        var html = "";
+        html += '<div class="d-kicker">事件の詳細</div>';
+        html += '<h2></h2>';
+        html += '<div class="d-date"></div>';
+        html += '<dl>' +
+          '<div><dt>規模</dt><dd class="d-scale"></dd></div>' +
+          '<div><dt>主な漏えい項目</dt><dd class="d-items"></dd></div>' +
+          '<div><dt>概要</dt><dd class="d-summary"></dd></div>' +
+          '</dl>';
+        if (id === 0) {
+          html += '<p class="empty">フリー枠は最初から開いているので、開閉ボタンはありません。</p>';
+        } else if (onBoard) {
+          html += '<button class="toggle-btn" id="btn-toggle" type="button"></button>';
+        } else {
+          html += '<p class="empty">この事件は今回のカードには入っていません。開けるのは盤面のマスだけです。</p>';
+        }
+        detail.innerHTML = html;
+        detail.querySelector("h2").textContent = item.name;
+        detail.querySelector(".d-date").textContent = "公表：" + item.date;
+        detail.querySelector(".d-scale").textContent = item.scale;
+        detail.querySelector(".d-items").textContent = item.items;
+        detail.querySelector(".d-summary").textContent = item.summary;
+        var tb = document.getElementById("btn-toggle");
+        if (tb) {
+          updateToggleBtn(tb, id);
+          tb.addEventListener("click", function () {
+            if (opened[id]) { delete opened[id]; } else { opened[id] = true; }
+            updateToggleBtn(tb, id);
+            renderAll();
+            toast(opened[id] ? "マスを開けました（被弾）" : "マスを閉じました");
+          });
+        }
+        renderGridOnly();
+        if (window.innerWidth <= 820) {
+          detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
+
+      function updateToggleBtn(tb, id) {
+        if (opened[id]) {
+          tb.textContent = "開いています ― タップで閉じる";
+          tb.classList.add("is-open");
+        } else {
+          tb.textContent = "自分も対象だった ― マスを開ける";
+          tb.classList.remove("is-open");
+        }
+      }
+
+      function renderGridOnly() {
+        computeStats();
+        renderGrid();
+      }
+
+      function renderAll() {
+        renderStats();
+        renderGrid();
+        renderPoolBadges();
+      }
+
+      function renderPoolBadges() {
+        var badges = document.querySelectorAll("[data-badge-for]");
+        badges.forEach(function (el) {
+          var id = parseInt(el.getAttribute("data-badge-for"), 10);
+          var onBoard = board.some(function (b) { return b.id === id; });
+          if (opened[id]) { el.textContent = "被弾（開いています）"; el.className = "p-badge"; }
+          else if (onBoard) { el.textContent = "今回のカードに入っています"; el.className = "p-badge off"; }
+          else { el.textContent = "今回のカードには入っていません"; el.className = "p-badge off"; }
+        });
+      }
+
+      function renderPool() {
+        var list = document.getElementById("pool-list");
+        list.innerHTML = "";
+        POOL.forEach(function (item) {
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "pool-item";
+          var nm = document.createElement("span"); nm.className = "p-name"; nm.textContent = item.name;
+          var meta = document.createElement("span"); meta.className = "p-meta";
+          meta.textContent = item.date + "｜" + item.scale;
+          var badge = document.createElement("span");
+          badge.setAttribute("data-badge-for", String(item.id));
+          btn.appendChild(nm); btn.appendChild(meta); btn.appendChild(badge);
+          btn.addEventListener("click", function () {
+            selectCell(item.id, -1);
+            document.getElementById("detail").scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+          list.appendChild(btn);
+        });
+      }
+
+      var toastTimer = null;
+      function toast(msg) {
+        var t = document.getElementById("toast");
+        t.textContent = msg;
+        t.classList.add("on");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { t.classList.remove("on"); }, 2200);
+      }
+
+      function shareText() {
+        var s = computeStats();
+        return "流出ビンゴ2026で35件中" + s.hit + "件被弾、" + s.bingo + "ビンゴでした（リーチ" + s.reach + "） #流出ビンゴ";
+      }
+
+      document.getElementById("btn-new").addEventListener("click", function () {
+        newCard();
+        toast("新しいカードを引きました");
+      });
+
+      document.getElementById("btn-share").addEventListener("click", function () {
+        var text = shareText();
+        var fallbackBox = document.getElementById("share-fallback");
+        var ta = document.getElementById("share-text");
+        function fallback() {
+          ta.value = text;
+          fallbackBox.style.display = "block";
+          ta.focus(); ta.select();
+          toast("コピー用テキストを表示しました");
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            fallbackBox.style.display = "none";
+            toast("シェア用テキストをコピーしました");
+          }, fallback);
+        } else {
+          fallback();
+        }
+      });
+
+      renderPool();
+      newCard();
+    </script>
+  </body>
+</html>
