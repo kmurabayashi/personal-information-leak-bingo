@@ -182,6 +182,51 @@
       footer.notes p { margin: 0; }
       footer.notes strong { color: var(--ink); }
 
+      /* bingo modal */
+      .modal-overlay {
+        position: fixed; inset: 0; background: rgba(12,13,15,.62); backdrop-filter: blur(3px);
+        display: none; align-items: flex-start; justify-content: center; overflow-y: auto;
+        padding: 18px 14px 28px; z-index: 100;
+      }
+      .modal-overlay.open { display: flex; }
+      .modal {
+        background: var(--surface); color: var(--ink); border-radius: 16px; border: 1px solid var(--line);
+        box-shadow: 0 24px 60px rgba(0,0,0,.28); width: 100%; max-width: 680px; overflow: hidden;
+      }
+      .modal-hero {
+        background: var(--stamp); color: #fff; padding: 22px 22px 18px; text-align: center; position: relative;
+      }
+      @media (prefers-color-scheme: dark) { .modal-hero { background: #7f1d18; } }
+      .modal-hero .bingo-word { font-size: 13px; font-weight: 900; letter-spacing: .35em; text-indent: .35em; opacity: .9; }
+      .modal-hero h2 { margin: 6px 0 6px; font-size: clamp(26px, 6vw, 36px); line-height: 1.15; font-weight: 900; }
+      .modal-hero p { margin: 0; font-size: 14px; opacity: .92; line-height: 1.6; }
+      .modal-body { padding: 20px 20px 8px; }
+      .modal-body h3 { font-size: 14px; letter-spacing: .06em; margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
+      .modal-body h3:first-child { margin-top: 0; }
+      .modal-body h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+      .line-box { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; background: var(--surface-2); }
+      .line-box strong { font-size: 13px; color: var(--stamp); letter-spacing: .04em; }
+      .line-box ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+      .chip { font-size: 12.5px; font-weight: 800; border: 1.5px solid var(--stamp); color: var(--stamp); background: var(--stamp-soft); border-radius: 999px; padding: 3px 10px; }
+      .chip.sub { border-color: var(--line); color: var(--ink-soft); background: var(--surface); }
+      .leak-list { display: grid; gap: 10px; }
+      .leak-item { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+      .leak-item .l-name { font-weight: 900; font-size: 14.5px; line-height: 1.4; }
+      .leak-item .l-date { font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+      .leak-item .l-items { font-size: 13.5px; margin-top: 6px; color: var(--ink); line-height: 1.6; }
+      .leak-item .l-label { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--ink-soft); }
+      .action-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+      .action-list li { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+      .action-list .a-num { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 999px; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-size: 13px; font-weight: 900; margin-top: 1px; }
+      .action-list .a-title { font-weight: 900; font-size: 14.5px; line-height: 1.4; }
+      .action-list .a-desc { font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; margin-top: 2px; }
+      .modal-foot { padding: 14px 20px 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+      .modal-foot .btn { flex: 1; min-width: 160px; }
+      .modal-close-x { position: absolute; right: 12px; top: 10px; width: 36px; height: 36px; border-radius: 999px; border: 1px solid rgba(255,255,255,.5); background: transparent; color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
+      .btn-bingo-view { display: none; }
+      .btn-bingo-view.on { display: inline-block; }
+
       .toast {
         position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px);
         background: var(--ink); color: var(--bg); font-weight: 800; font-size: 14px;
@@ -222,10 +267,11 @@
           <div class="card">
             <div class="card-head" aria-hidden="true"><span>B</span><span>I</span><span>N</span><span>G</span><span>O</span></div>
             <div class="grid" id="grid" role="group" aria-label="ビンゴカード"></div>
-            <p class="hint">マスをタップすると右（下）のパネルに事件の詳細が出ます。開ける／閉じるはパネルのボタンでどうぞ。</p>
+            <p class="hint">マスをタップすると右（下）のパネルに事件の詳細が出ます。開ける／閉じるはパネルのボタンでどうぞ。ビンゴが揃うと、流出した内容のまとめと対策がポップアップで表示されます。</p>
           </div>
           <div class="controls">
             <button class="btn" id="btn-new" type="button">新しいカードを引く</button>
+            <button class="btn secondary btn-bingo-view" id="btn-bingo-view" type="button">ビンゴの内訳と対策を見る</button>
             <button class="btn secondary" id="btn-share" type="button">結果をコピーしてシェア</button>
           </div>
           <div class="share-fallback" id="share-fallback">
@@ -250,6 +296,37 @@
         <p>事件の件数・規模の表現（「約」「最大」「可能性」「おそれ」を含む）は、各社の公式発表ベースの表記そのままです。調査の進展で後日更新・訂正された発表もあります。</p>
         <p>ビンゴが揃っても<strong>景品はありません</strong>。あるのは「また通知が来た」という事実だけです。不審な連絡が来たら、メールやSMSのリンクではなく公式アプリ・公式サイトから確認を。</p>
       </footer>
+    </div>
+
+    <!-- Bingo celebration modal -->
+    <div class="modal-overlay" id="bingo-modal" role="dialog" aria-modal="true" aria-labelledby="bingo-modal-title" hidden>
+      <div class="modal">
+        <div class="modal-hero">
+          <button class="modal-close-x" id="bingo-modal-close-x" type="button" aria-label="閉じる">×</button>
+          <div class="bingo-word">― B I N G O ―</div>
+          <h2 id="bingo-modal-title">ビンゴおめでとう！</h2>
+          <p id="bingo-modal-sub">1ライン揃いました。……おめでたいのかはさておき、揃ったラインで何が流出したのかをまとめました。</p>
+        </div>
+        <div class="modal-body">
+          <h3>揃ったライン</h3>
+          <div id="bingo-lines"></div>
+
+          <h3>流出した内容のまとめ</h3>
+          <p style="margin:0 0 10px; font-size:13.5px; color:var(--ink-soft);">ビンゴライン上の事件で漏れた項目を合算しました。各事件の「漏れた項目」はカードに保持しているデータから表示しています。</p>
+          <div class="chips" id="bingo-chips" style="margin-bottom:14px;"></div>
+          <div class="leak-list" id="bingo-leaks"></div>
+
+          <h3>今すぐやる対策</h3>
+          <p style="margin:0 0 12px; font-size:13.5px; color:var(--ink-soft);">流出した項目に合わせて、優先度の高い順に並べています。当てはまるものから順に対応してください。</p>
+          <ul class="action-list" id="bingo-actions"></ul>
+
+          <p style="font-size:12.5px; color:var(--ink-soft); margin:16px 0 4px;">※ 対策は一般的な初動です。最終的には各サービスの公式発表・公式サイトに書かれた手順が正です。メールやSMSのリンクからは入らず、公式アプリ／公式サイトを自分で開いて確認してください。</p>
+        </div>
+        <div class="modal-foot">
+          <button class="btn" id="bingo-modal-close" type="button">閉じてカードに戻る</button>
+          <button class="btn secondary" id="bingo-modal-share" type="button">結果をコピー</button>
+        </div>
+      </div>
     </div>
 
     <div class="toast" id="toast" role="status"></div>
@@ -302,9 +379,68 @@
       ];
 
       var board = [];        // 25 items (FREE at index 12)
-      var opened = {};       // id -> true
+      var opened = {};       // id -> true — 開けたマス。対応する事件の items が「何が流出したか」
       var selectedId = null; // detail panel target
       var bingoCells = {};   // index -> true when part of a completed line
+      var prevBingoCount = 0;
+      var lastBingoLines = []; // [{ label, items: [POOL...] }]
+
+      // 流出項目の分類定義：各事件の items 文字列から何が漏れたかを判定する
+      var LEAK_CATEGORIES = [
+        { key: "password", label: "パスワード／ハッシュ", keywords: ["パスワード", "ハッシュ"] },
+        { key: "card", label: "クレジットカード情報", keywords: ["カード情報", "カード番号", "カードは一部", "カード番号の一部"] },
+        { key: "email", label: "メールアドレス", keywords: ["メール"] },
+        { key: "name", label: "氏名", keywords: ["氏名"] },
+        { key: "address", label: "住所", keywords: ["住所"] },
+        { key: "phone", label: "電話番号", keywords: ["電話"] },
+        { key: "birth", label: "生年月日", keywords: ["生年月日"] },
+        { key: "bank", label: "口座情報", keywords: ["口座情報", "振替口座"] },
+        { key: "passport", label: "パスポート情報", keywords: ["パスポート"] },
+        { key: "license", label: "免許・本人確認書類", keywords: ["免許", "本人確認書類"] },
+        { key: "order", label: "注文・予約・利用履歴", keywords: ["注文履歴", "予約情報", "利用情報", "購入", "宿泊"] },
+        { key: "health", label: "健康等の要配慮情報", keywords: ["健康状態", "要配慮"] }
+      ];
+
+      function lineLabel(line) {
+        // 横・縦・斜めのラベル
+        var key = line.join(",");
+        var map = {
+          "0,1,2,3,4": "横・1行目", "5,6,7,8,9": "横・2行目", "10,11,12,13,14": "横・3行目",
+          "15,16,17,18,19": "横・4行目", "20,21,22,23,24": "横・5行目",
+          "0,5,10,15,20": "縦・B列", "1,6,11,16,21": "縦・I列", "2,7,12,17,22": "縦・N列",
+          "3,8,13,18,23": "縦・G列", "4,9,14,19,24": "縦・O列",
+          "0,6,12,18,24": "斜め＼", "4,8,12,16,20": "斜め／"
+        };
+        return map[key] || "ライン";
+      }
+
+      function analyzeLeaked(itemsList) {
+        var found = {};
+        var order = [];
+        LEAK_CATEGORIES.forEach(function (cat) {
+          var hit = itemsList.some(function (txt) {
+            return cat.keywords.some(function (kw) { return txt.indexOf(kw) !== -1; });
+          });
+          if (hit) { found[cat.key] = cat; order.push(cat); }
+        });
+        return order;
+      }
+
+      function buildActions(categories) {
+        var has = {};
+        categories.forEach(function (c) { has[c.key] = true; });
+        var actions = [];
+        if (has.password) actions.push({ title: "パスワードを変更する（使い回しは全部）", desc: "対象サービスのパスワードを今すぐ変更してください。同じパスワードを他サービスでも使っている場合はそちらも変更を。あわせて2段階認証（パスキー／認証アプリ）を有効化してください。ハッシュ化されていても安心はできません。" });
+        if (has.card) actions.push({ title: "カードの利用明細を確認し、カード会社へ連絡を検討", desc: "直近数か月の利用明細に身に覚えのない請求がないか確認してください。不審な請求があればカード会社へ連絡し、必要に応じて利用停止・再発行を相談してください。番号全桁が漏れていないケースでも油断しないでください。" });
+        if (has.bank) actions.push({ title: "口座の入出金明細を確認する", desc: "振替口座情報が含まれる場合は、口座の不審な引き落としがないか確認し、心配な場合は金融機関・保険会社へ相談してください。" });
+        if (has.email) actions.push({ title: "フィッシングに警戒する", desc: "メールアドレスが漏れると「流出のお詫び」「パスワード再設定」を装った詐欺メールが増えます。メール／SMS内のリンクは踏まず、公式アプリや公式サイトを自分で開いて確認してください。" });
+        if (has.name || has.address || has.phone || has.birth) actions.push({ title: "なりすまし・不審な連絡に注意する", desc: "氏名・住所・電話・生年月日が揃うと、本人を装った連絡や不正申込に使われることがあります。身に覚えのない郵便・請求・登録完了メールが届いたら、記載の連絡先ではなく公式窓口で確認してください。" });
+        if (has.passport || has.license) actions.push({ title: "本人確認書類の悪用に注意する", desc: "免許証やパスポート情報・画像が含まれる場合は、なりすまし申込に注意してください。不審な契約や登録の通知が届いたらすぐに発行元・事業者へ確認を。" });
+        if (has.order) actions.push({ title: "注文・予約履歴を悪用した連絡に注意", desc: "注文・予約内容を知っている相手からの連絡は本物らしく見えます。日時や商品名を言われても即信用せず、公式サイトのマイページで履歴を照合してください。" });
+        actions.push({ title: "各社の公式発表で自分の対象範囲を確認する", desc: "このまとめはビンゴライン上の合算です。実際に自分が対象かどうか、対象期間や項目は各社の公式発表・個別通知で必ず確認してください。通知が来ていない＝対象外とは限りません。" });
+        actions.push({ title: "パスワード管理と通知の保管", desc: "パスワードマネージャーでサービスごとに異なるパスワードにし、流出通知メールは証拠として保管しておくと、後から対象範囲が更新されたときに照合できます。" });
+        return actions;
+      }
 
       function shuffle(arr) {
         var a = arr.slice();
@@ -320,6 +456,8 @@
         board = picked.slice(0, 12).concat([FREE], picked.slice(12));
         opened = {};
         selectedId = null;
+        prevBingoCount = 0;
+        closeBingoModal();
         renderAll();
         document.getElementById("detail").innerHTML =
           '<p class="empty">新しいカードを引きました。マスを選ぶと、ここに事件の詳細が出ます。</p>';
@@ -335,17 +473,113 @@
         board.forEach(function (item) { if (item.id !== 0 && opened[item.id]) hit++; });
         var bingo = 0, reach = 0;
         bingoCells = {};
+        lastBingoLines = [];
         LINES.forEach(function (line) {
           var openCount = 0;
           line.forEach(function (idx) { if (isOpenAt(idx)) openCount++; });
           if (openCount === 5) {
             bingo++;
             line.forEach(function (idx) { bingoCells[idx] = true; });
+            var lineItems = line.map(function (idx) { return board[idx]; }).filter(function (it) { return it && it.id !== 0; });
+            lastBingoLines.push({ label: lineLabel(line), items: lineItems, indices: line.slice() });
           } else if (openCount === 4) {
             reach++;
           }
         });
-        return { hit: hit, reach: reach, bingo: bingo };
+        return { hit: hit, reach: reach, bingo: bingo, lines: lastBingoLines };
+      }
+
+      function openBingoModal() {
+        var stats = computeStats();
+        if (stats.bingo === 0) return;
+        // 重複を除いた、ビンゴライン上の全事件
+        var seen = {};
+        var uniqueItems = [];
+        lastBingoLines.forEach(function (ln) {
+          ln.items.forEach(function (it) { if (!seen[it.id]) { seen[it.id] = true; uniqueItems.push(it); } });
+        });
+        var allItemsText = uniqueItems.map(function (it) { return it.items; });
+        var categories = analyzeLeaked(allItemsText);
+        var actions = buildActions(categories);
+
+        document.getElementById("bingo-modal-sub").textContent =
+          stats.bingo + "ライン揃いました。おめでとうございます——揃ったラインの" + uniqueItems.length + "件で、何が流出したのかをまとめました。";
+
+        var linesEl = document.getElementById("bingo-lines");
+        linesEl.innerHTML = "";
+        lastBingoLines.forEach(function (ln) {
+          var box = document.createElement("div");
+          box.className = "line-box";
+          var strong = document.createElement("strong");
+          strong.textContent = ln.label + "（" + stats.bingo + "ビンゴ中）";
+          box.appendChild(strong);
+          var ul = document.createElement("ul");
+          ln.items.forEach(function (it) {
+            var li = document.createElement("li");
+            li.textContent = it.name + "（" + it.date + "）";
+            ul.appendChild(li);
+          });
+          // FREE枠を含むラインの場合
+          if (ln.indices.indexOf(12) !== -1) {
+            var liFree = document.createElement("li");
+            liFree.textContent = "FREE（フリー枠）";
+            ul.appendChild(liFree);
+          }
+          box.appendChild(ul);
+          linesEl.appendChild(box);
+        });
+
+        var chipsEl = document.getElementById("bingo-chips");
+        chipsEl.innerHTML = "";
+        if (categories.length === 0) {
+          var c0 = document.createElement("span"); c0.className = "chip sub"; c0.textContent = "項目の詳細は各事件をご確認ください"; chipsEl.appendChild(c0);
+        } else {
+          categories.forEach(function (cat) {
+            var chip = document.createElement("span"); chip.className = "chip"; chip.textContent = cat.label; chipsEl.appendChild(chip);
+          });
+        }
+
+        var leaksEl = document.getElementById("bingo-leaks");
+        leaksEl.innerHTML = "";
+        uniqueItems.forEach(function (it) {
+          var div = document.createElement("div");
+          div.className = "leak-item";
+          var name = document.createElement("div"); name.className = "l-name"; name.textContent = it.name;
+          var date = document.createElement("div"); date.className = "l-date"; date.textContent = "公表：" + it.date + "｜規模：" + it.scale;
+          var label = document.createElement("div"); label.className = "l-label"; label.textContent = "流出した内容（保持データ）"; label.style.marginTop = "8px";
+          var items = document.createElement("div"); items.className = "l-items"; items.textContent = it.items;
+          var label2 = document.createElement("div"); label2.className = "l-label"; label2.textContent = "概要"; label2.style.marginTop = "6px";
+          var summ = document.createElement("div"); summ.className = "l-items"; summ.textContent = it.summary;
+          div.appendChild(name); div.appendChild(date); div.appendChild(label); div.appendChild(items); div.appendChild(label2); div.appendChild(summ);
+          leaksEl.appendChild(div);
+        });
+
+        var actEl = document.getElementById("bingo-actions");
+        actEl.innerHTML = "";
+        actions.forEach(function (a, i) {
+          var li = document.createElement("li");
+          var num = document.createElement("span"); num.className = "a-num"; num.textContent = String(i + 1);
+          var wrap = document.createElement("div");
+          var t = document.createElement("div"); t.className = "a-title"; t.textContent = a.title;
+          var d = document.createElement("div"); d.className = "a-desc"; d.textContent = a.desc;
+          wrap.appendChild(t); wrap.appendChild(d);
+          li.appendChild(num); li.appendChild(wrap);
+          actEl.appendChild(li);
+        });
+
+        var overlay = document.getElementById("bingo-modal");
+        overlay.hidden = false;
+        overlay.classList.add("open");
+        document.body.style.overflow = "hidden";
+        var closeBtn = document.getElementById("bingo-modal-close");
+        if (closeBtn) closeBtn.focus();
+      }
+
+      function closeBingoModal() {
+        var overlay = document.getElementById("bingo-modal");
+        overlay.classList.remove("open");
+        overlay.hidden = true;
+        document.body.style.overflow = "";
       }
 
       function renderGrid() {
@@ -389,6 +623,8 @@
         document.getElementById("stat-reach").textContent = s.reach;
         document.getElementById("stat-bingo").textContent = s.bingo;
         document.getElementById("bingo-flash").className = "bingo-flash" + (s.bingo > 0 ? " on" : "");
+        var viewBtn = document.getElementById("btn-bingo-view");
+        if (viewBtn) viewBtn.className = "btn secondary btn-bingo-view" + (s.bingo > 0 ? " on" : "");
         return s;
       }
 
@@ -408,7 +644,7 @@
         html += '<div class="d-date"></div>';
         html += '<dl>' +
           '<div><dt>規模</dt><dd class="d-scale"></dd></div>' +
-          '<div><dt>主な漏えい項目</dt><dd class="d-items"></dd></div>' +
+          '<div><dt>流出した内容（この事件で漏れたもの）</dt><dd class="d-items"></dd></div>' +
           '<div><dt>概要</dt><dd class="d-summary"></dd></div>' +
           '</dl>';
         if (id === 0) {
@@ -428,10 +664,19 @@
         if (tb) {
           updateToggleBtn(tb, id);
           tb.addEventListener("click", function () {
+            var before = computeStats().bingo;
             if (opened[id]) { delete opened[id]; } else { opened[id] = true; }
             updateToggleBtn(tb, id);
-            renderAll();
-            toast(opened[id] ? "マスを開けました（被弾）" : "マスを閉じました");
+            var afterStats = renderAll();
+            // renderAll returns undefined, so recompute
+            var after = computeStats().bingo;
+            prevBingoCount = after;
+            if (opened[id] && after > before) {
+              // 新しくビンゴが成立したらポップアップ
+              setTimeout(function () { openBingoModal(); }, 180);
+            } else {
+              toast(opened[id] ? "マスを開けました（被弾）" : "マスを閉じました");
+            }
           });
         }
         renderGridOnly();
@@ -456,9 +701,10 @@
       }
 
       function renderAll() {
-        renderStats();
+        var s = renderStats();
         renderGrid();
         renderPoolBadges();
+        return s;
       }
 
       function renderPoolBadges() {
@@ -504,7 +750,15 @@
 
       function shareText() {
         var s = computeStats();
-        return "流出ビンゴ2026で35件中" + s.hit + "件被弾、" + s.bingo + "ビンゴでした（リーチ" + s.reach + "） #流出ビンゴ";
+        var base = "流出ビンゴ2026で35件中" + s.hit + "件被弾、" + s.bingo + "ビンゴでした（リーチ" + s.reach + "）";
+        if (s.bingo > 0 && lastBingoLines.length) {
+          var seen = {}; var uniq = [];
+          lastBingoLines.forEach(function (ln) { ln.items.forEach(function (it) { if (!seen[it.id]) { seen[it.id] = true; uniq.push(it); } }); });
+          var cats = analyzeLeaked(uniq.map(function (it) { return it.items; })).map(function (c) { return c.label; });
+          if (cats.length) base += "｜ビンゴラインで流出：" + cats.join("・");
+          base += "｜対象：" + uniq.map(function (it) { return it.short; }).join("、");
+        }
+        return base + " #流出ビンゴ";
       }
 
       document.getElementById("btn-new").addEventListener("click", function () {
@@ -529,6 +783,25 @@
           }, fallback);
         } else {
           fallback();
+        }
+      });
+
+      // Bingo modal wiring
+      document.getElementById("btn-bingo-view").addEventListener("click", function () { openBingoModal(); });
+      document.getElementById("bingo-modal-close").addEventListener("click", closeBingoModal);
+      document.getElementById("bingo-modal-close-x").addEventListener("click", closeBingoModal);
+      document.getElementById("bingo-modal").addEventListener("click", function (e) {
+        if (e.target === this) closeBingoModal();
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeBingoModal();
+      });
+      document.getElementById("bingo-modal-share").addEventListener("click", function () {
+        var text = shareText();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { toast("ビンゴ結果をコピーしました"); }, function () { toast(text); });
+        } else {
+          toast(text);
         }
       });
 
