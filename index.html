@@ -210,12 +210,6 @@
       .chips { display: flex; flex-wrap: wrap; gap: 7px; }
       .chip { font-size: 12.5px; font-weight: 800; border: 1.5px solid var(--stamp); color: var(--stamp); background: var(--stamp-soft); border-radius: 999px; padding: 3px 10px; }
       .chip.sub { border-color: var(--line); color: var(--ink-soft); background: var(--surface); }
-      .leak-list { display: grid; gap: 10px; }
-      .leak-item { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
-      .leak-item .l-name { font-weight: 900; font-size: 14.5px; line-height: 1.4; }
-      .leak-item .l-date { font-size: 12px; color: var(--ink-soft); font-weight: 700; }
-      .leak-item .l-items { font-size: 13.5px; margin-top: 6px; color: var(--ink); line-height: 1.6; }
-      .leak-item .l-label { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--ink-soft); }
       .action-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
       .action-list li { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
       .action-list .a-num { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 999px; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-size: 13px; font-weight: 900; margin-top: 1px; }
@@ -304,17 +298,15 @@
         <div class="modal-hero">
           <button class="modal-close-x" id="bingo-modal-close-x" type="button" aria-label="閉じる">×</button>
           <div class="bingo-word">― B I N G O ―</div>
-          <h2 id="bingo-modal-title">ビンゴおめでとう！</h2>
-          <p id="bingo-modal-sub">1ライン揃いました。……おめでたいのかはさておき、揃ったラインで何が流出したのかをまとめました。</p>
+          <h2 id="bingo-modal-title">ビンゴ！</h2>
+          <p id="bingo-modal-sub">1ライン揃いました。ご愁傷さまです。揃ったラインで何が流出したのかをまとめました。</p>
         </div>
         <div class="modal-body">
           <h3>揃ったライン</h3>
           <div id="bingo-lines"></div>
 
           <h3>流出した内容のまとめ</h3>
-          <p style="margin:0 0 10px; font-size:13.5px; color:var(--ink-soft);">ビンゴライン上の事件で漏れた項目を合算しました。各事件の「漏れた項目」はカードに保持しているデータから表示しています。</p>
-          <div class="chips" id="bingo-chips" style="margin-bottom:14px;"></div>
-          <div class="leak-list" id="bingo-leaks"></div>
+          <div class="chips" id="bingo-chips"></div>
 
           <h3>今すぐやる対策</h3>
           <p style="margin:0 0 12px; font-size:13.5px; color:var(--ink-soft);">流出した項目に合わせて、優先度の高い順に並べています。当てはまるものから順に対応してください。</p>
@@ -503,7 +495,7 @@
         var actions = buildActions(categories);
 
         document.getElementById("bingo-modal-sub").textContent =
-          stats.bingo + "ライン揃いました。おめでとうございます——揃ったラインの" + uniqueItems.length + "件で、何が流出したのかをまとめました。";
+          stats.bingo + "ライン揃いました。ご愁傷さまです——揃ったラインの" + uniqueItems.length + "件で、何が流出したのかをまとめました。";
 
         var linesEl = document.getElementById("bingo-lines");
         linesEl.innerHTML = "";
@@ -539,21 +531,6 @@
           });
         }
 
-        var leaksEl = document.getElementById("bingo-leaks");
-        leaksEl.innerHTML = "";
-        uniqueItems.forEach(function (it) {
-          var div = document.createElement("div");
-          div.className = "leak-item";
-          var name = document.createElement("div"); name.className = "l-name"; name.textContent = it.name;
-          var date = document.createElement("div"); date.className = "l-date"; date.textContent = "公表：" + it.date + "｜規模：" + it.scale;
-          var label = document.createElement("div"); label.className = "l-label"; label.textContent = "流出した内容（保持データ）"; label.style.marginTop = "8px";
-          var items = document.createElement("div"); items.className = "l-items"; items.textContent = it.items;
-          var label2 = document.createElement("div"); label2.className = "l-label"; label2.textContent = "概要"; label2.style.marginTop = "6px";
-          var summ = document.createElement("div"); summ.className = "l-items"; summ.textContent = it.summary;
-          div.appendChild(name); div.appendChild(date); div.appendChild(label); div.appendChild(items); div.appendChild(label2); div.appendChild(summ);
-          leaksEl.appendChild(div);
-        });
-
         var actEl = document.getElementById("bingo-actions");
         actEl.innerHTML = "";
         actions.forEach(function (a, i) {
@@ -571,14 +548,18 @@
         overlay.hidden = false;
         overlay.classList.add("open");
         document.body.style.overflow = "hidden";
+        // 常にポップアップの一番上から表示する（前回のスクロール位置を引き継がない）
+        overlay.scrollTop = 0;
         var closeBtn = document.getElementById("bingo-modal-close");
-        if (closeBtn) closeBtn.focus();
+        if (closeBtn) closeBtn.focus({ preventScroll: true });
+        overlay.scrollTop = 0;
       }
 
       function closeBingoModal() {
         var overlay = document.getElementById("bingo-modal");
         overlay.classList.remove("open");
         overlay.hidden = true;
+        overlay.scrollTop = 0;
         document.body.style.overflow = "";
       }
 
