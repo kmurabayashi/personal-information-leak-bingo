@@ -217,7 +217,19 @@
       .action-list .a-desc { font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; margin-top: 2px; }
       .modal-foot { padding: 14px 20px 20px; display: flex; flex-wrap: wrap; gap: 10px; }
       .modal-foot .btn { flex: 1; min-width: 160px; }
-      .modal-close-x { position: absolute; right: 12px; top: 10px; width: 36px; height: 36px; border-radius: 999px; border: 1px solid rgba(255,255,255,.5); background: transparent; color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
+      .modal-close-x {
+        position: absolute; right: 8px; top: 8px; z-index: 5;
+        width: 52px; height: 52px; min-width: 52px; min-height: 52px;
+        border-radius: 999px; border: 1.5px solid rgba(255,255,255,.65);
+        background: rgba(0,0,0,.22); color: #fff; font-size: 28px; line-height: 1;
+        cursor: pointer; display: grid; place-items: center; padding: 0 0 2px;
+        touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+        appearance: none; font-family: inherit;
+      }
+      .modal-close-x::after { content: ""; position: absolute; inset: -8px; }
+      .modal-close-x:hover { background: rgba(0,0,0,.38); }
+      .modal-close-x:active { background: rgba(0,0,0,.48); transform: scale(.96); }
+      .modal-close-x:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
       .btn-bingo-view { display: none; }
       .btn-bingo-view.on { display: inline-block; }
 
@@ -228,11 +240,6 @@
         transition: opacity .2s ease, transform .2s ease; z-index: 50; max-width: 92vw; text-align: center;
       }
       .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
-      .share-fallback { margin-top: 10px; display: none; }
-      .share-fallback textarea {
-        width: 100%; font-family: inherit; font-size: 14px; padding: 10px; border-radius: 8px;
-        border: 1px solid var(--line); background: var(--surface); color: var(--ink);
-      }
       @media (prefers-reduced-motion: reduce) {
         * { transition: none !important; }
       }
@@ -266,10 +273,6 @@
           <div class="controls">
             <button class="btn" id="btn-new" type="button">新しいカードを引く</button>
             <button class="btn secondary btn-bingo-view" id="btn-bingo-view" type="button">ビンゴの内訳と対策を見る</button>
-            <button class="btn secondary" id="btn-share" type="button">結果をコピーしてシェア</button>
-          </div>
-          <div class="share-fallback" id="share-fallback">
-            <textarea id="share-text" rows="2" readonly aria-label="シェア用テキスト"></textarea>
           </div>
         </div>
 
@@ -316,7 +319,6 @@
         </div>
         <div class="modal-foot">
           <button class="btn" id="bingo-modal-close" type="button">閉じてカードに戻る</button>
-          <button class="btn secondary" id="bingo-modal-share" type="button">結果をコピー</button>
         </div>
       </div>
     </div>
@@ -494,8 +496,30 @@
         var categories = analyzeLeaked(allItemsText);
         var actions = buildActions(categories);
 
-        document.getElementById("bingo-modal-sub").textContent =
-          stats.bingo + "ライン揃いました。ご愁傷さまです——揃ったラインの" + uniqueItems.length + "件で、何が流出したのかをまとめました。";
+        var isPerfect = stats.hit === 24;
+        var titleEl = document.getElementById("bingo-modal-title");
+        var phrase;
+        if (isPerfect) {
+          titleEl.textContent = "パーフェクトビンゴ！";
+          phrase = "逆に何の情報が流出してないの？";
+        } else if (stats.bingo === 2) {
+          titleEl.textContent = "ダブルビンゴ！";
+          phrase = "逆に考えるんだ。「上げちゃってもいいさ」って";
+        } else if (stats.bingo === 3) {
+          titleEl.textContent = "トリプルビンゴ！";
+          phrase = "もうフリー素材ですね";
+        } else {
+          // 1ライン、および4ライン以上は通常の「ビンゴ！」
+          titleEl.textContent = "ビンゴ！";
+          phrase = "ご愁傷さまです";
+        }
+        if (isPerfect) {
+          document.getElementById("bingo-modal-sub").textContent =
+            "全マス開放のパーフェクトです。" + phrase + " ——全" + uniqueItems.length + "件で、何が流出したのかをまとめました。";
+        } else {
+          document.getElementById("bingo-modal-sub").textContent =
+            stats.bingo + "ライン揃いました。" + phrase + "——揃ったラインの" + uniqueItems.length + "件で、何が流出したのかをまとめました。";
+        }
 
         var linesEl = document.getElementById("bingo-lines");
         linesEl.innerHTML = "";
@@ -729,61 +753,22 @@
         toastTimer = setTimeout(function () { t.classList.remove("on"); }, 2200);
       }
 
-      function shareText() {
-        var s = computeStats();
-        var base = "流出ビンゴ2026で35件中" + s.hit + "件被弾、" + s.bingo + "ビンゴでした（リーチ" + s.reach + "）";
-        if (s.bingo > 0 && lastBingoLines.length) {
-          var seen = {}; var uniq = [];
-          lastBingoLines.forEach(function (ln) { ln.items.forEach(function (it) { if (!seen[it.id]) { seen[it.id] = true; uniq.push(it); } }); });
-          var cats = analyzeLeaked(uniq.map(function (it) { return it.items; })).map(function (c) { return c.label; });
-          if (cats.length) base += "｜ビンゴラインで流出：" + cats.join("・");
-          base += "｜対象：" + uniq.map(function (it) { return it.short; }).join("、");
-        }
-        return base + " #流出ビンゴ";
-      }
-
       document.getElementById("btn-new").addEventListener("click", function () {
         newCard();
         toast("新しいカードを引きました");
       });
 
-      document.getElementById("btn-share").addEventListener("click", function () {
-        var text = shareText();
-        var fallbackBox = document.getElementById("share-fallback");
-        var ta = document.getElementById("share-text");
-        function fallback() {
-          ta.value = text;
-          fallbackBox.style.display = "block";
-          ta.focus(); ta.select();
-          toast("コピー用テキストを表示しました");
-        }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(function () {
-            fallbackBox.style.display = "none";
-            toast("シェア用テキストをコピーしました");
-          }, fallback);
-        } else {
-          fallback();
-        }
-      });
-
       // Bingo modal wiring
       document.getElementById("btn-bingo-view").addEventListener("click", function () { openBingoModal(); });
       document.getElementById("bingo-modal-close").addEventListener("click", closeBingoModal);
-      document.getElementById("bingo-modal-close-x").addEventListener("click", closeBingoModal);
+      var closeX = document.getElementById("bingo-modal-close-x");
+      closeX.addEventListener("click", function (e) { e.stopPropagation(); closeBingoModal(); });
+      closeX.addEventListener("pointerup", function (e) { e.stopPropagation(); });
       document.getElementById("bingo-modal").addEventListener("click", function (e) {
         if (e.target === this) closeBingoModal();
       });
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape") closeBingoModal();
-      });
-      document.getElementById("bingo-modal-share").addEventListener("click", function () {
-        var text = shareText();
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(function () { toast("ビンゴ結果をコピーしました"); }, function () { toast(text); });
-        } else {
-          toast(text);
-        }
       });
 
       renderPool();
